@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Impariamo a Leggere",
+    "slug": "kids-learn",
+    "version": "1.0.0",
+    "platforms": ["ios", "android"],
+    "orientation": "landscape",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sebastianpabst.kidslearn"
+    },
+    "android": {
+      "package": "com.sebastianpabst.kidslearn"
+    }
+  }
+}
