@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, SafeAreaView } from 'react-native';
-import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Svg, { Path, Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 
@@ -16,39 +15,51 @@ export default function LetterTraceScreen({ navigation }) {
   const [feedbackColor, setFeedbackColor] = useState('#4A90E2');
   const [dots, setDots] = useState([]);
   const pointCounter = useRef(0);
+  const isDrawing = useRef(false);
 
-  const panGesture = Gesture.Pan()
-    .onStart((event) => {
-      const { x, y } = event;
-      setCurrentPath(`M ${x} ${y}`);
-      pointCounter.current = 0;
-    })
-    .onUpdate((event) => {
-      const { x, y } = event;
-      setCurrentPath((prev) => `${prev} L ${x} ${y}`);
+  const handleTouchStart = (event) => {
+    const touch = event.nativeEvent.touches[0];
+    const { locationX, locationY } = touch;
 
-      // Feedback aptico ogni 10 punti
-      pointCounter.current++;
-      if (pointCounter.current % 10 === 0) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    isDrawing.current = true;
+    setCurrentPath(`M ${locationX} ${locationY}`);
+    pointCounter.current = 0;
+  };
 
-        // Aggiungi un puntino colorato
-        setDots((prev) => [...prev, { x, y, id: Date.now() + Math.random() }]);
-      }
-    })
-    .onEnd(() => {
-      if (pointCounter.current > 30) {
-        // Ha tracciato abbastanza
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setFeedback(`Bravissima! Hai tracciato la ${LETTERS[currentLetterIndex]}! ⭐`);
-        setFeedbackColor('#50C878');
-        setPaths((prev) => [...prev, currentPath]);
-      }
-      setCurrentPath('');
+  const handleTouchMove = (event) => {
+    if (!isDrawing.current) return;
 
-      // Rimuovi i puntini dopo un po'
-      setTimeout(() => setDots([]), 500);
-    });
+    const touch = event.nativeEvent.touches[0];
+    const { locationX, locationY } = touch;
+
+    setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+
+    // Feedback aptico più frequente - ogni 3 punti
+    pointCounter.current++;
+    if (pointCounter.current % 3 === 0) {
+      // Usa selectionAsync che è più leggero e funziona meglio
+      Haptics.selectionAsync();
+
+      // Aggiungi un puntino colorato
+      setDots((prev) => [...prev, { x: locationX, y: locationY, id: Date.now() + Math.random() }]);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    isDrawing.current = false;
+
+    if (pointCounter.current > 30) {
+      // Ha tracciato abbastanza
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setFeedback(`Bravissima! Hai tracciato la ${LETTERS[currentLetterIndex]}! ⭐`);
+      setFeedbackColor('#50C878');
+      setPaths((prev) => [...prev, currentPath]);
+    }
+    setCurrentPath('');
+
+    // Rimuovi i puntini dopo un po'
+    setTimeout(() => setDots([]), 500);
+  };
 
   const nextLetter = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -66,73 +77,75 @@ export default function LetterTraceScreen({ navigation }) {
   };
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <SafeAreaView style={styles.container}>
-        {/* Pulsante indietro */}
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← Menu</Text>
-        </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
+      {/* Pulsante indietro */}
+      <TouchableOpacity style={styles.backButton} onPress={goBack}>
+        <Text style={styles.backButtonText}>← Menu</Text>
+      </TouchableOpacity>
 
-        {/* Pulsante prossima lettera */}
-        <TouchableOpacity style={styles.nextButton} onPress={nextLetter}>
-          <Text style={styles.nextButtonText}>Prossima →</Text>
-        </TouchableOpacity>
+      {/* Pulsante prossima lettera */}
+      <TouchableOpacity style={styles.nextButton} onPress={nextLetter}>
+        <Text style={styles.nextButtonText}>Prossima →</Text>
+      </TouchableOpacity>
 
-        {/* Lettera grande in background */}
-        <Text style={styles.letterBackground}>{LETTERS[currentLetterIndex]}</Text>
+      {/* Lettera grande in background */}
+      <Text style={styles.letterBackground}>{LETTERS[currentLetterIndex]}</Text>
 
-        {/* Canvas per disegnare */}
-        <GestureDetector gesture={panGesture}>
-          <View style={styles.canvas}>
-            <Svg width={width} height={height} style={styles.svg}>
-              {/* Disegna i path precedenti */}
-              {paths.map((path, index) => (
-                <Path
-                  key={index}
-                  d={path}
-                  stroke="#4A90E2"
-                  strokeWidth="12"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              ))}
+      {/* Canvas per disegnare */}
+      <View
+        style={styles.canvas}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+      >
+        <Svg width={width} height={height} style={styles.svg}>
+          {/* Disegna i path precedenti */}
+          {paths.map((path, index) => (
+            <Path
+              key={index}
+              d={path}
+              stroke="#4A90E2"
+              strokeWidth="12"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
 
-              {/* Disegna il path corrente */}
-              {currentPath && (
-                <Path
-                  d={currentPath}
-                  stroke="#4A90E2"
-                  strokeWidth="12"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              )}
+          {/* Disegna il path corrente */}
+          {currentPath && (
+            <Path
+              d={currentPath}
+              stroke="#4A90E2"
+              strokeWidth="12"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
 
-              {/* Puntini colorati per feedback */}
-              {dots.map((dot) => (
-                <Circle
-                  key={dot.id}
-                  cx={dot.x}
-                  cy={dot.y}
-                  r="8"
-                  fill="#F39C12"
-                  opacity="0.6"
-                />
-              ))}
-            </Svg>
-          </View>
-        </GestureDetector>
+          {/* Puntini colorati per feedback */}
+          {dots.map((dot) => (
+            <Circle
+              key={dot.id}
+              cx={dot.x}
+              cy={dot.y}
+              r="8"
+              fill="#F39C12"
+              opacity="0.6"
+            />
+          ))}
+        </Svg>
+      </View>
 
-        {/* Feedback */}
-        <View style={styles.feedbackContainer}>
-          <Text style={[styles.feedbackText, { color: feedbackColor }]}>
-            {feedback}
-          </Text>
-        </View>
-      </SafeAreaView>
-    </GestureHandlerRootView>
+      {/* Feedback */}
+      <View style={styles.feedbackContainer}>
+        <Text style={[styles.feedbackText, { color: feedbackColor }]}>
+          {feedback}
+        </Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
