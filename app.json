@@ -3,15 +3,26 @@
     "name": "Impariamo a Leggere",
     "slug": "kids-learn",
     "version": "1.0.0",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "orientation": "landscape",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sebastianpabst.kidslearn"
+      "bundleIdentifier": "com.sebastianpabst.kidslearn",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.sebastianpabst.kidslearn"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7fb8a10f-4288-42ab-a869-fde0318ea117"
+      }
     }
   }
 }

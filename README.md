@@ -56,10 +56,13 @@ npm run ios     # Avvia su simulatore iOS
 npm run android # Avvia su simulatore Android
 ```
 
-## Build per produzione
+## Build Nativa per iPad
 
-Per creare una build da installare sull'iPad:
+Per avere il **pieno supporto al feedback aptico**, serve una build nativa (Expo Go ha limitazioni).
 
+**Guida completa**: Vedi [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md)
+
+**Quick start**:
 ```bash
 # Installa EAS CLI
 npm install -g eas-cli
@@ -67,9 +70,11 @@ npm install -g eas-cli
 # Login ad Expo
 eas login
 
-# Build per iOS
-eas build --platform ios
+# Crea build per iPad
+eas build --platform ios --profile development
 ```
+
+La build verrà creata sul cloud e riceverai un link per installarla direttamente sull'iPad.
 
 ## Tecnologie utilizzate
 
