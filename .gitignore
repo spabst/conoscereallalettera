@@ -19,3 +19,7 @@ web-build/
 
 ios/*
 android/*
+
+# Test coverage
+coverage/
+*.lcov

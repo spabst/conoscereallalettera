@@ -1,142 +1,140 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, SafeAreaView } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import SandTraceCanvas from '../components/sand/SandTraceCanvas';
+import { SUPPORTED_LETTERS } from '../features/tracing/letterTargets';
+import { evaluateTrace } from '../features/tracing/traceEvaluator';
+import { TRACE_CONFIG } from '../features/tracing/traceConfig';
 
 const { width, height } = Dimensions.get('window');
 
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'Z'];
+// State machine: idle -> drawing -> (success | drawing)
+const STATE = {
+  IDLE: 'idle',
+  DRAWING: 'drawing',
+  SUCCESS: 'success',
+};
 
 export default function LetterTraceScreen({ navigation }) {
   const [currentLetterIndex, setCurrentLetterIndex] = useState(0);
-  const [paths, setPaths] = useState([]);
-  const [currentPath, setCurrentPath] = useState('');
+  const [state, setState] = useState(STATE.IDLE);
+  const [strokes, setStrokes] = useState([]);
   const [feedback, setFeedback] = useState('Traccia la lettera con il dito!');
   const [feedbackColor, setFeedbackColor] = useState('#4A90E2');
-  const [dots, setDots] = useState([]);
-  const pointCounter = useRef(0);
-  const isDrawing = useRef(false);
+  const [resetToken, setResetToken] = useState(0);
 
-  const handleTouchStart = (event) => {
-    const touch = event.nativeEvent.touches[0];
-    const { locationX, locationY } = touch;
+  // Dev mode metrics (only shown in __DEV__)
+  const [devMetrics, setDevMetrics] = useState(null);
 
-    isDrawing.current = true;
-    setCurrentPath(`M ${locationX} ${locationY}`);
-    pointCounter.current = 0;
-  };
+  const currentLetter = SUPPORTED_LETTERS[currentLetterIndex];
 
-  const handleTouchMove = (event) => {
-    if (!isDrawing.current) return;
+  // Handle stroke completion from canvas
+  const handleStrokeComplete = useCallback((stroke) => {
+    // Use functional update to avoid stale closure
+    setStrokes(prevStrokes => {
+      const newStrokes = [...prevStrokes, stroke];
 
-    const touch = event.nativeEvent.touches[0];
-    const { locationX, locationY } = touch;
+      // Evaluate immediately after each stroke
+      const result = evaluateTrace({
+        targetLetter: currentLetter,
+        strokes: newStrokes,
+        canvasSize: { width, height },
+        config: TRACE_CONFIG,
+      });
 
-    setCurrentPath((prev) => `${prev} L ${locationX} ${locationY}`);
+      // Store metrics for dev mode
+      if (__DEV__) {
+        setDevMetrics(result);
+      }
 
-    // Feedback aptico più frequente - ogni 3 punti
-    pointCounter.current++;
-    if (pointCounter.current % 3 === 0) {
-      // Usa selectionAsync che è più leggero e funziona meglio
-      Haptics.selectionAsync();
+      if (result.success) {
+        // Success! Transition to success state
+        setState(STATE.SUCCESS);
+        setFeedback(`Bravissima! Hai tracciato la ${currentLetter}! ⭐`);
+        setFeedbackColor('#50C878');
 
-      // Aggiungi un puntino colorato
-      setDots((prev) => [...prev, { x: locationX, y: locationY, id: Date.now() + Math.random() }]);
-    }
-  };
+        // Success haptic only
+        if (TRACE_CONFIG.haptics.enableSuccessHaptic) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      } else {
+        // Not yet successful - stay in drawing state, no negative feedback
+        // Child can continue adding strokes
+        setState(STATE.DRAWING);
+      }
 
-  const handleTouchEnd = () => {
-    isDrawing.current = false;
+      return newStrokes;
+    });
+  }, [currentLetter]);
 
-    if (pointCounter.current > 30) {
-      // Ha tracciato abbastanza
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setFeedback(`Bravissima! Hai tracciato la ${LETTERS[currentLetterIndex]}! ⭐`);
-      setFeedbackColor('#50C878');
-      setPaths((prev) => [...prev, currentPath]);
-    }
-    setCurrentPath('');
-
-    // Rimuovi i puntini dopo un po'
-    setTimeout(() => setDots([]), 500);
-  };
-
-  const nextLetter = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setPaths([]);
-    setDots([]);
-    setCurrentPath('');
-    setCurrentLetterIndex((prev) => (prev + 1) % LETTERS.length);
+  // Reset current attempt
+  const handleReset = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setStrokes([]);
+    setState(STATE.IDLE);
     setFeedback('Traccia la lettera con il dito!');
     setFeedbackColor('#4A90E2');
+    setResetToken(prev => prev + 1);
+    if (__DEV__) {
+      setDevMetrics(null);
+    }
   };
 
-  const goBack = () => {
+  // Move to next letter
+  const handleNext = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setStrokes([]);
+    setState(STATE.IDLE);
+    setCurrentLetterIndex((prev) => (prev + 1) % SUPPORTED_LETTERS.length);
+    setFeedback('Traccia la lettera con il dito!');
+    setFeedbackColor('#4A90E2');
+    setResetToken(prev => prev + 1);
+    if (__DEV__) {
+      setDevMetrics(null);
+    }
+  };
+
+  // Go back to menu
+  const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     navigation.goBack();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Pulsante indietro */}
-      <TouchableOpacity style={styles.backButton} onPress={goBack}>
+      {/* Back button */}
+      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
         <Text style={styles.backButtonText}>← Menu</Text>
       </TouchableOpacity>
 
-      {/* Pulsante prossima lettera */}
-      <TouchableOpacity style={styles.nextButton} onPress={nextLetter}>
+      {/* Reset button */}
+      <TouchableOpacity
+        style={[styles.resetButton, strokes.length === 0 && styles.buttonDisabled]}
+        onPress={handleReset}
+        disabled={strokes.length === 0}
+      >
+        <Text style={styles.resetButtonText}>Ricomincia</Text>
+      </TouchableOpacity>
+
+      {/* Next button - enabled after success */}
+      <TouchableOpacity
+        style={[styles.nextButton, state !== STATE.SUCCESS && styles.buttonDisabled]}
+        onPress={handleNext}
+        disabled={state !== STATE.SUCCESS}
+      >
         <Text style={styles.nextButtonText}>Prossima →</Text>
       </TouchableOpacity>
 
-      {/* Lettera grande in background */}
-      <Text style={styles.letterBackground}>{LETTERS[currentLetterIndex]}</Text>
-
-      {/* Canvas per disegnare */}
-      <View
-        style={styles.canvas}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-      >
-        <Svg width={width} height={height} style={styles.svg}>
-          {/* Disegna i path precedenti */}
-          {paths.map((path, index) => (
-            <Path
-              key={index}
-              d={path}
-              stroke="#4A90E2"
-              strokeWidth="12"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ))}
-
-          {/* Disegna il path corrente */}
-          {currentPath && (
-            <Path
-              d={currentPath}
-              stroke="#4A90E2"
-              strokeWidth="12"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-
-          {/* Puntini colorati per feedback */}
-          {dots.map((dot) => (
-            <Circle
-              key={dot.id}
-              cx={dot.x}
-              cy={dot.y}
-              r="8"
-              fill="#F39C12"
-              opacity="0.6"
-            />
-          ))}
-        </Svg>
+      {/* Sand canvas */}
+      <View style={styles.canvasContainer}>
+        <SandTraceCanvas
+          targetLetter={currentLetter}
+          disabled={state === STATE.SUCCESS}
+          onStrokeComplete={handleStrokeComplete}
+          resetToken={resetToken}
+          width={width}
+          height={height}
+        />
       </View>
 
       {/* Feedback */}
@@ -145,6 +143,21 @@ export default function LetterTraceScreen({ navigation }) {
           {feedback}
         </Text>
       </View>
+
+      {/* Dev diagnostics - only in __DEV__ */}
+      {__DEV__ && devMetrics && (
+        <View style={styles.devContainer}>
+          <Text style={styles.devText}>
+            Coverage: {(devMetrics.coverage * 100).toFixed(1)}% |
+            Precision: {(devMetrics.precision * 100).toFixed(1)}% |
+            Score: {(devMetrics.score * 100).toFixed(1)}%
+          </Text>
+          <Text style={styles.devText}>
+            Length: {(devMetrics.normalizedLength * 100).toFixed(1)}% |
+            Samples: {devMetrics.userSampleCount}/{devMetrics.targetSampleCount}
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -153,6 +166,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',
+  },
+  canvasContainer: {
+    flex: 1,
   },
   backButton: {
     position: 'absolute',
@@ -169,6 +185,25 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  resetButton: {
+    position: 'absolute',
+    top: 60,
+    right: 180,
+    backgroundColor: '#F39C12',
+    padding: 15,
+    borderRadius: 12,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  resetButtonText: {
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '600',
@@ -192,21 +227,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
   },
-  letterBackground: {
-    position: 'absolute',
-    fontSize: 400,
-    fontWeight: 'bold',
-    color: '#E8E8E8',
-    alignSelf: 'center',
-    top: height / 2 - 250,
-    zIndex: 0,
-  },
-  canvas: {
-    flex: 1,
-    zIndex: 1,
-  },
-  svg: {
-    flex: 1,
+  buttonDisabled: {
+    opacity: 0.4,
   },
   feedbackContainer: {
     position: 'absolute',
@@ -227,5 +249,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  devContainer: {
+    position: 'absolute',
+    top: 140,
+    left: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 10,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  devText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: 'monospace',
   },
 });

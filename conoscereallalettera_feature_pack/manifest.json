@@ -1,0 +1,17 @@
+{
+  "repo": "https://github.com/spabst/conoscereallalettera",
+  "purpose": "Claude implementation pack for cartoon sand letter tracing + target-aware validation",
+  "files": [
+    "CLAUDE.md",
+    "docs/00_README_FIRST.md",
+    "docs/01_FEATURE_SPEC.md",
+    "docs/02_ARCHITECTURE.md",
+    "docs/03_ACCEPTANCE_CRITERIA.md",
+    "docs/04_CLAUDE_MASTER_PROMPT.md",
+    "docs/05_CLAUDE_PROMPT_SEQUENCE.md",
+    "docs/06_TEST_PLAN.md",
+    "docs/07_OPTIONAL_IOS27_HANDWRITING.md",
+    "references/cartoon_sand_reference.png",
+    "references/original_sand_reference.jpg"
+  ]
+}
