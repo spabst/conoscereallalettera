@@ -6,6 +6,7 @@ import MenuScreen from './screens/MenuScreen';
 import LetterTraceScreen from './screens/LetterTraceScreen';
 import ImageMatchScreen from './screens/ImageMatchScreen';
 import WordBuildScreen from './screens/WordBuildScreen';
+import ClockLearnScreen from './screens/ClockLearnScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +25,11 @@ export default function App() {
           <Stack.Screen name="LetterTrace" component={LetterTraceScreen} />
           <Stack.Screen name="ImageMatch" component={ImageMatchScreen} />
           <Stack.Screen name="WordBuild" component={WordBuildScreen} />
+          <Stack.Screen
+            name="ClockLearn"
+            component={ClockLearnScreen}
+            options={{ gestureEnabled: false }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>

@@ -7,6 +7,7 @@ export default function MenuScreen({ navigation }) {
     { title: '🖊️ Traccia le Lettere', screen: 'LetterTrace', color: '#4A90E2' },
     { title: '🎨 Associa le Immagini', screen: 'ImageMatch', color: '#50C878' },
     { title: '🔤 Componi le Parole', screen: 'WordBuild', color: '#F39C12' },
+    { title: '🕐 Impara l\'Ora', screen: 'ClockLearn', color: '#9B59B6' },
   ];
 
   const handlePress = (screen) => {
