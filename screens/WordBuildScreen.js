@@ -3,17 +3,92 @@ import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Animated } from
 import * as Haptics from 'expo-haptics';
 
 const WORDS = [
+  // Animali
   { word: 'CANE', emoji: '🐕' },
   { word: 'GATTO', emoji: '🐱' },
+  { word: 'LEONE', emoji: '🦁' },
+  { word: 'TIGRE', emoji: '🐯' },
+  { word: 'ORSO', emoji: '🐻' },
+  { word: 'LUPO', emoji: '🐺' },
+  { word: 'PESCE', emoji: '🐟' },
+  { word: 'RANA', emoji: '🐸' },
+  { word: 'UCCELLO', emoji: '🐦' },
+  // { word: 'FARFALLA', emoji: '🦋' },
+  { word: 'APE', emoji: '🐝' },
+  //  { word: 'ELEFANTE', emoji: '🐘' },
+  { word: 'MUCCA', emoji: '🐄' },
+  { word: 'CAVALLO', emoji: '🐴' },
+  { word: 'CONIGLIO', emoji: '🐰' },
+  { word: 'TOPO', emoji: '🐭' },
+  { word: 'PANDA', emoji: '🐼' },
+  // { word: 'KOALA', emoji: '🐨' },
+
+  // Frutti
   { word: 'MELA', emoji: '🍎' },
+  { word: 'PERA', emoji: '🍐' },
+  { word: 'BANANA', emoji: '🍌' },
+  { word: 'UVA', emoji: '🍇' },
+  { word: 'ARANCIA', emoji: '🍊' },
+  { word: 'LIMONE', emoji: '🍋' },
+  { word: 'CILIEGIA', emoji: '🍒' },
+  { word: 'FRAGOLA', emoji: '🍓' },
+  { word: 'ANGURIA', emoji: '🍉' },
+  { word: 'ANANAS', emoji: '🍍' },
+  { word: 'PESCA', emoji: '🍑' },
+
+  // Natura
   { word: 'SOLE', emoji: '☀️' },
   { word: 'LUNA', emoji: '🌙' },
-  { word: 'CASA', emoji: '🏠' },
+  { word: 'STELLA', emoji: '⭐' },
+  { word: 'NUVOLA', emoji: '☁️' },
+  { word: 'PIOGGIA', emoji: '🌧️' },
+  { word: 'NEVE', emoji: '❄️' },
+  { word: 'ARCOBALENO', emoji: '🌈' },
   { word: 'FIORE', emoji: '🌸' },
+  { word: 'ROSA', emoji: '🌹' },
+  { word: 'ALBERO', emoji: '🌳' },
+  { word: 'FOGLIA', emoji: '🍂' },
   { word: 'MARE', emoji: '🌊' },
+  // { word: 'MONTAGNA', emoji: '⛰️' },
+  { word: 'FUOCO', emoji: '🔥' },
+
+  // Oggetti e luoghi
+  { word: 'CASA', emoji: '🏠' },
+  // { word: 'SCUOLA', emoji: '🏫' },
+  { word: 'AUTO', emoji: '🚗' },
+  { word: 'TRENO', emoji: '🚂' },
+  { word: 'AEREO', emoji: '✈️' },
+  { word: 'NAVE', emoji: '🚢' },
+  { word: 'BICI', emoji: '🚲' },
+  { word: 'PALLA', emoji: '⚽' },
+  { word: 'LIBRO', emoji: '📚' },
+  { word: 'MATITA', emoji: '✏️' },
+  // { word: 'FORBICI', emoji: '✂️' },
+  { word: 'CUORE', emoji: '❤️' },
+  { word: 'REGALO', emoji: '🎁' },
+  { word: 'TORTA', emoji: '🎂' },
+  { word: 'PIZZA', emoji: '🍕' },
+  { word: 'GELATO', emoji: '🍦' },
+  { word: 'PANE', emoji: '🍞' },
+  { word: 'LATTE', emoji: '🥛' },
+
+  // Emozioni e azioni
+  { word: 'GIOIA', emoji: '😊' },
+  { word: 'AMORE', emoji: '💕' },
+  { word: 'SOGNO', emoji: '💭' },
+  { word: 'MUSICA', emoji: '🎵' },
+  { word: 'FESTA', emoji: '🎉' },
+  { word: 'BACIO', emoji: '💋' },
+
+  // Colori
+  { word: 'ROSSO', emoji: '🔴' },
+  { word: 'BLU', emoji: '🔵' },
+  { word: 'VERDE', emoji: '🟢' },
+  { word: 'GIALLO', emoji: '🟡' },
 ];
 
 export default function WordBuildScreen({ navigation }) {
+  const [shuffledWords, setShuffledWords] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [shuffledLetters, setShuffledLetters] = useState([]);
   const [placedLetters, setPlacedLetters] = useState([]);
@@ -22,12 +97,21 @@ export default function WordBuildScreen({ navigation }) {
   const [usedIndices, setUsedIndices] = useState([]);
   const scaleAnim = new Animated.Value(1);
 
+  // Mescola le parole all'inizio
   useEffect(() => {
-    setupWord();
-  }, [currentIndex]);
+    const shuffled = [...WORDS].sort(() => Math.random() - 0.5);
+    setShuffledWords(shuffled);
+  }, []);
+
+  useEffect(() => {
+    if (shuffledWords.length > 0) {
+      setupWord();
+    }
+  }, [currentIndex, shuffledWords]);
 
   const setupWord = () => {
-    const current = WORDS[currentIndex].word;
+    if (shuffledWords.length === 0) return;
+    const current = shuffledWords[currentIndex].word;
     const letters = current.split('');
     const shuffled = [...letters].sort(() => 0.5 - Math.random());
     setShuffledLetters(shuffled);
@@ -43,13 +127,13 @@ export default function WordBuildScreen({ navigation }) {
     setUsedIndices([...usedIndices, index]);
 
     // Controlla se la parola è completa
-    if (newPlaced.length === WORDS[currentIndex].word.length) {
+    if (newPlaced.length === shuffledWords[currentIndex].word.length) {
       checkWord(newPlaced.join(''));
     }
   };
 
   const checkWord = (builtWord) => {
-    const correct = WORDS[currentIndex].word;
+    const correct = shuffledWords[currentIndex].word;
 
     if (builtWord === correct) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -87,7 +171,7 @@ export default function WordBuildScreen({ navigation }) {
   };
 
   const nextWord = () => {
-    setCurrentIndex((prev) => (prev + 1) % WORDS.length);
+    setCurrentIndex((prev) => (prev + 1) % shuffledWords.length);
   };
 
   const goBack = () => {
@@ -95,7 +179,16 @@ export default function WordBuildScreen({ navigation }) {
     navigation.goBack();
   };
 
-  const current = WORDS[currentIndex];
+  // Proteggi da accesso a array vuoto
+  if (shuffledWords.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>Caricamento...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const current = shuffledWords[currentIndex];
   const wordLength = current.word.length;
 
   return (
